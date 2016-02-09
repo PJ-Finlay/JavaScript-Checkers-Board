@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="ISO-8859-1">
+        <title>Checkers</title>
+    </head>
+    <body>
+        <canvas id="board" width="600" height="600" style="border-style:solid;"></canvas>
+		<script>
+        var c=document.getElementById("board");  
+        var boardSize = c.width;
+        var squareSize = boardSize/8;
+        var ctx = c.getContext("2d");
+        var pieces = new Array();
+        var selectedX;
+        var selectedY;
+        initializeBoard();
+        renderBoard();
+        c.addEventListener("click", function(event){
+            if(selectedX == null && selectedY == null){
+                selectedX = Math.floor(event.clientX/squareSize);
+                selectedY = Math.floor(event.clientY/squareSize);
+                if(findPieceInArray(selectedX,selectedY)==-1){
+                    selectedX = null;
+                    selectedY = null;
+                }
+            }else{
+                secondSelectionX = Math.floor(event.clientX/squareSize);
+                secondSelectionY = Math.floor(event.clientY/squareSize);
+                if(selectedX == secondSelectionX && selectedY == secondSelectionY){
+                    selectedX = null;
+                    selectedY = null;
+                }else if(validMove(selectedX, selectedY, secondSelectionX, secondSelectionY)){
+                    makeMove(selectedX, selectedY, secondSelectionX, secondSelectionY);
+                    selectedX = null;
+                    selectedY = null;
+                }
+            }
+            renderBoard();
+        }, false);
+        function initializeBoard(){
+            for(var j = 0; j < 3; j++){
+                for(var i = 1; i < 8; i+=2){ //Place top team
+                    if(j==1){
+                        pieces.push(new GamePiece(i-1,j,0,0));
+                    }else{
+                        pieces.push(new GamePiece(i,j,0,0));                
+                    }
+                }
+            }
+            for(var j = 5; j < 8; j++){
+                for(var i = 0; i < 8; i+=2){ //Place bottom team
+                    if(j==6){
+                        pieces.push(new GamePiece(i+1,j,0,1));
+                    }else{
+                        pieces.push(new GamePiece(i,j,0,1));                
+                    }
+                }
+            }
+        }
+        function renderBoard(){
+            drawBoard();
+            showSelected();
+            findNewKings();
+            renderPieces(pieces);
+        }
+        function drawBoard(){
+            for(var i = 0; i < 8; i++){
+                for(var j = 0; j < 8; j++){
+                    if((i+j)%2 == 0){
+                        drawSquare(i*squareSize,j*squareSize,squareSize,"Red");  
+                    }
+                    else{
+                        drawSquare(i*squareSize,j*squareSize,squareSize,"Black");           
+                    }
+                }
+            }
+        }
+        function renderPieces(pieces){
+            for(var i in pieces){
+                if(pieces[i].notCaptured){
+                    drawGamePiece(pieces[i]);
+                }
+            }
+        }
+        function showSelected(){
+            if(selectedX != null && selectedY != null){
+                drawSquare(selectedX*squareSize,selectedY*squareSize,squareSize,"Pink");
+            }
+        }
+        function drawGamePiece(piece){
+            var color;
+            if(piece.team == 0){
+                color = "Yellow";
+            }
+            else{
+                color = "Green";
+            }
+            drawCircle(piece.x*squareSize + squareSize/2, piece.y*squareSize + squareSize/2,squareSize/3,color);
+            if(piece.isKing){
+            var ctx = c.getContext("2d");
+                var kingSize = squareSize/2;
+                ctx.font = kingSize.toString() + "px Arial";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                var kingString = String.fromCharCode(9812);
+                ctx.strokeText(kingString,squareSize * piece.x + squareSize/2,squareSize * piece.y + squareSize/2);
+            }
+        }
+        function drawSquare(x,y,width,color){
+            ctx.beginPath(); 
+            ctx.rect(x,y,width,width);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+        function drawCircle(x,y,r,color){
+            ctx.beginPath();
+            ctx.arc(x,y,r,0,2*Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+        }
+        function GamePiece(x,y,isKing,team){
+            this.x = x;
+            this.y = y;
+            this.isKing = isKing;
+            this.team = team;
+            this.notCaptured = 1;
+        }
+        GamePiece.prototype.capture = function(){
+            this.notCaptured = 0;
+            this.x = -1;
+            this.y = -1;
+        }
+        function findPieceInArray(x,y){
+            for(var i in pieces){
+                if(pieces[i].x == x && pieces[i].y ==y){
+                    return i;
+                }
+            }
+            return -1;
+        }
+        function validMove(selectedX, selectedY, secondSelectionX, secondSelectionY){
+            if(Math.abs(selectedX - secondSelectionX) == 1 && Math.abs(selectedY - secondSelectionY) == 1 ){//Potential Single Move
+                if(findPieceInArray(secondSelectionX,secondSelectionY) == -1){
+                    return true;
+                } else{
+                    return false;
+                }
+            }
+            else{
+                if(Math.abs(selectedX - secondSelectionX) == 2 && Math.abs(selectedY - secondSelectionY) == 2){//Potential Capture Move
+                    if(findPieceInArray(secondSelectionX,secondSelectionY) == -1){
+                        return true;
+                    } else{
+                        return false;
+                    }
+                }
+                return false;
+            }
+        }
+        function makeMove(selectedX, selectedY, secondSelectionX, secondSelectionY){
+            if(Math.abs(selectedX - secondSelectionX) == 1 && Math.abs(selectedY - secondSelectionY) == 1 ){//Potential Single Move
+                var movingPiece = pieces[findPieceInArray(selectedX,selectedY)];
+                movingPiece.x = secondSelectionX;
+                movingPiece.y = secondSelectionY;
+            }
+            else{
+                if(Math.abs(selectedX - secondSelectionX) == 2 && Math.abs(selectedY - secondSelectionY) == 2){//Potential Capture Move
+                        var movingPiece = pieces[findPieceInArray(selectedX,selectedY)];
+                        movingPiece.x = secondSelectionX;
+                        movingPiece.y = secondSelectionY;
+                        var middlePiece = pieces[findPieceInArray((selectedX+secondSelectionX)/2,(selectedY+secondSelectionY)/2)];
+                        middlePiece.capture();
+                }
+                return false;
+            }
+        }
+        function findNewKings(){
+            for(var i in pieces){
+                if(pieces[i].team == 0 && pieces[i].y == 7) pieces[i].isKing = true;
+                if(pieces[i].team == 1 && pieces[i].y == 0) pieces[i].isKing = true;
+            }
+        }
+        </script>
+    </body>
+</html>
